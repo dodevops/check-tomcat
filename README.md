@@ -25,3 +25,12 @@ return code 2.
 ## Details
 
 Use --help to get more information about available parameters.
+
+## Building
+
+To build the app, run
+
+    mvn package
+
+Afterwards, you can find a JAR with all packaged dependency in the 
+target/-folder named check-tomcat-<version>-jar-with-dependencies.jar. 
