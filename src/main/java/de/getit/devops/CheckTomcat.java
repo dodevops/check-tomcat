@@ -4,9 +4,12 @@ import de.getit.devops.jmx.JmxProxy;
 import de.getit.devops.jmx.Resource;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.joda.time.Instant;
 import org.joda.time.Interval;
 
+import javax.management.JMException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,23 +28,26 @@ public class CheckTomcat {
         final String osNewLines = System.lineSeparator() +
             System.lineSeparator();
 
-        String header =
-            String.format(
-                "Wait until all applications in a tomcat servlet container " +
-                    "are started.%s",
-                osNewLines
-            );
+        String header = "";
 
         if (StringUtils.isNotBlank(errorMessage)) {
             header =
                 String.format(
-                    "Wait until all applications in a tomcat servlet container " +
-                        "are started.%s%s%s",
-                    osNewLines,
+                    "%s%s",
                     errorMessage,
                     osNewLines
                 );
         }
+
+        header =
+            String.format(
+                "%sWait until all applications in a tomcat servlet container" +
+                    " are started. Will return exit code 3, if the jmx port " +
+                    "can not be reached, 2 if the timeout has been reached " +
+                    "and 1 on other errors.%s",
+                header,
+                osNewLines
+            );
 
         final HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp("check-tomcat", header, CheckTomcat.options, "",
@@ -76,10 +82,10 @@ public class CheckTomcat {
         );
 
         options.addOption(Option.builder("p")
-        .longOpt("password")
-        .hasArg()
-        .desc("Password for JMX connection")
-        .build()
+            .longOpt("password")
+            .hasArg()
+            .desc("Password for JMX connection")
+            .build()
         );
 
         options.addOption(Option.builder("h")
@@ -120,22 +126,36 @@ public class CheckTomcat {
             System.exit(0);
         }
 
-        final JmxProxy proxy;
+        JmxProxy proxy;
 
-        if (cmd.hasOption("u")) {
+        try {
 
-            proxy = new JmxProxy(
-                cmd.getOptionValue("j"),
-                cmd.getOptionValue("u"),
-                cmd.getOptionValue("p")
-            );
+            if (cmd.hasOption("u")) {
 
-        } else {
+                proxy = new JmxProxy(
+                    cmd.getOptionValue("j"),
+                    cmd.getOptionValue("u"),
+                    cmd.getOptionValue("p")
+                );
 
-            proxy = new JmxProxy(cmd.getOptionValue("j"));
+            } else {
+
+                proxy = new JmxProxy(cmd.getOptionValue("j"));
+
+            }
+        } catch (JMException e) {
+
+            if (ExceptionUtils.getRootCause(e) instanceof ConnectException) {
+                // JMX port available, but maybe after some seconds. Return
+                // a special return code for that.
+
+                System.exit(3);
+            }
+
+            System.exit(1);
+            return;
 
         }
-
 
         final List<Resource> resources = proxy.getResources();
 

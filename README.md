@@ -1,7 +1,14 @@
 # check-tomcat
 
 This is a small JAVA program, that connects to a Tomcat servlet container 
-using JMX and waits, until all resources are loaded.
+using JMX and waits, until all contexts are loaded.
+
+This is done by gathering all beans with type NamingResources and 
+resourcetype context, getting their host and path and checking the attribute 
+"stateName" of the beans with j2eeType WebModule, J2EEApplication none,
+J2EEServer none and name=//<host>/<path>.
+
+Once all contexts have the stateName "STARTED", the program exits.
 
 ## Usage
 
@@ -21,6 +28,12 @@ minutes. This can be configured using the parameter "-t".
 
 If the timeout is reached, the program exists with an error message and 
 return code 2.
+
+## Connection problems
+
+When called directly after a server is started, the JMX service might not be 
+up and running - which is an expected error. In this case, the script will 
+return code 3, so that other scripts using it may react to it and restart it.
   
 ## Details
 
