@@ -22,6 +22,7 @@ import java.util.List;
 public class CheckTomcat {
 
     private static Options options;
+    public static boolean debugMode;
 
     private static void showHelp(final String errorMessage) {
 
@@ -101,6 +102,20 @@ public class CheckTomcat {
             .build()
         );
 
+        options.addOption(Option.builder("d")
+            .longOpt("debug")
+            .desc("Enable debug mode")
+            .build()
+        );
+
+        options.addOption(Option.builder("r")
+            .desc("Resource paths to check")
+            .numberOfArgs(Option.UNLIMITED_VALUES)
+            .argName("HOST:PATH[,HOST:PATH]")
+            .required()
+            .build()
+        );
+
         final CommandLineParser parser = new DefaultParser();
         CommandLine cmd = null;
         try {
@@ -157,8 +172,6 @@ public class CheckTomcat {
 
         }
 
-        final List<Resource> resources = proxy.getResources();
-
         int timeout = 600;
 
         if (cmd.hasOption("t")) {
@@ -175,6 +188,50 @@ public class CheckTomcat {
 
         }
 
+        CheckTomcat.debugMode = false;
+
+        if (cmd.hasOption("d")) {
+            CheckTomcat.debugMode = true;
+        }
+
+        final List<Resource> resources = new ArrayList<>();
+
+        for (final String value : cmd.getOptionValues("r")) {
+
+            final String[] resourceConfig = value.split(":");
+
+            final Resource resource;
+
+            if (resourceConfig.length == 1) {
+                // The path is missing. This is a root resource
+
+                resource = new Resource(
+                    resourceConfig[0],
+                    "/"
+                );
+
+            } else {
+
+                resource = new Resource(
+                    resourceConfig[0],
+                    "/" + resourceConfig[1]
+                );
+            }
+
+
+            resources.add(resource);
+
+        }
+
+        if (CheckTomcat.debugMode) {
+            System.err.println(
+                String.format(
+                    "Found %d ressources.",
+                    resources.size()
+                )
+            );
+        }
+
         final ArrayList<Resource> startedRessources = new ArrayList<>();
 
         final Instant startedInstant = new Instant();
@@ -183,10 +240,37 @@ public class CheckTomcat {
 
             for (final Resource resource : resources) {
 
-                if (!startedRessources.contains(resource) &&
-                    proxy.isResourceStarted(resource)) {
+                if (!startedRessources.contains(resource)) {
 
-                    startedRessources.add(resource);
+                    if (CheckTomcat.debugMode) {
+                        System.err.println(
+                            String.format(
+                                "Checking resource %s%s",
+                                resource.getHost(),
+                                resource.getPath()
+                            )
+                        );
+                    }
+
+                    if (proxy.isResourceStarted(resource)) {
+
+                        if (CheckTomcat.debugMode) {
+                            System.err.println(
+                                "Resource started."
+                            );
+                        }
+
+                        startedRessources.add(resource);
+
+                    } else {
+
+                        if (CheckTomcat.debugMode) {
+                            System.err.println(
+                                "Resource not yet started."
+                            );
+                        }
+
+                    }
 
                 }
 

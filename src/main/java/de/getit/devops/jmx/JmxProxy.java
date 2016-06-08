@@ -37,38 +37,6 @@ public class JmxProxy {
 
     }
 
-    public List<Resource> getResources() throws JMException {
-
-        final ArrayList<Resource> ressources = new ArrayList<>();
-
-        final Set<ObjectName> catalinaBeans = this.client.getBeanNames("Catalina");
-
-        for (final ObjectName catalinaBean : catalinaBeans) {
-
-            if (
-                "NamingResources".equalsIgnoreCase(
-                    catalinaBean.getKeyProperty("type")
-                ) &&
-                    "Context".equalsIgnoreCase(
-                        catalinaBean.getKeyProperty("resourcetype")
-                    )
-                ) {
-
-                ressources.add(
-                    new Resource(
-                        catalinaBean.getKeyProperty("host"),
-                        catalinaBean.getKeyProperty("path")
-                    )
-                );
-
-            }
-
-        }
-
-        return ressources;
-
-    }
-
     public boolean isResourceStarted(final Resource resource) throws Exception {
 
         final Hashtable<String, String> beanKeys = new Hashtable<>();
