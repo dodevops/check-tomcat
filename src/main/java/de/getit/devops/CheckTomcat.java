@@ -152,7 +152,7 @@ public class CheckTomcat {
                 System.exit(3);
             }
 
-            System.exit(1);
+            showHelp(e.getMessage());
             return;
 
         }
