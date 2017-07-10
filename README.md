@@ -3,16 +3,15 @@
 This is a small JAVA program, that connects to a Tomcat servlet container 
 using JMX and waits, until all contexts are loaded.
 
-This is done by gathering all beans with type NamingResources and 
-resourcetype context, getting their host and path and checking the attribute 
-"stateName" of the beans with j2eeType WebModule, J2EEApplication none,
-J2EEServer none and name=//<host>/<path>.
+This is done by checking all beans with type NamingResources and
+resourcetype context and comparing them to a list of known contexts, that
+should start.
 
 Once all contexts have the stateName "STARTED", the program exits.
 
 ## Usage
 
-    java -jar check-tomcat.jar -j <jmx-URL>
+    java -jar check-tomcat.jar -j <jmx-URL> -r <Resources to check>
 
 Use a valid jmx-URL like this:
 
@@ -20,6 +19,8 @@ Use a valid jmx-URL like this:
 
 Replace <jmx host name> and <jmx port> with the hostname and port of your jmx
  server.
+
+Specify -r for each resource you want to check (i.e. myserver:some/context)
  
 ## Timeout
 
@@ -34,6 +35,17 @@ return code 2.
 When called directly after a server is started, the JMX service might not be 
 up and running - which is an expected error. In this case, the script will 
 return code 3, so that other scripts using it may react to it and restart it.
+
+## Dealing with startup problems
+
+To check, why check-tomcat doesn't return, run check-tomcat with "-d" and
+it will output all contexts, that have not been started.
+
+Example:
+
+    TOMCAT_HOME=/usr/local/tomcat/conf/Catalina
+    RESOURCES=`cd ${TOMCAT_HOME} && find * -type f | sed -re "s/ROOT//gi" | tr / : | tr \# \/ | sed -re "s/\.xml//gi" | paste -s -d "," | sed -re "s/,/ -r /gi"`
+    java -jar check-tomcat.jar -j service:jmx:rmi:///jndi/rmi://localhost:9003/jmxrmi -r $RESOURCES -d
   
 ## Details
 
